@@ -108,13 +108,12 @@ public class OleasterRunner extends ParentRunner<Spec> {
 
 
 	private void runBeforeEachCallbacks(Spec spec) {
-		List<Invokable> beforeEachHandlers = this.collectInvokables(spec.getSuite(), Suite::getBeforeEachHandlers);
+		List<Invokable> beforeEachHandlers = this.collectInvokables(spec.getSuite(), Suite::getBeforeEachHandlers, true);
 		this.runInvokables(beforeEachHandlers);
 	}
 
 	private void runBeforeCallbacks(Spec spec) {
-		List<Invokable> beforeHandlers = this.collectInvokables(spec.getSuite(), Suite::getBeforeHandlers);
-		Collections.reverse(beforeHandlers);
+		List<Invokable> beforeHandlers = this.collectInvokables(spec.getSuite(), Suite::getBeforeHandlers, true);
 		this.runInvokables(beforeHandlers);
 	}
 
@@ -127,12 +126,22 @@ public class OleasterRunner extends ParentRunner<Spec> {
 		this.runInvokables(this.collectInvokables(spec.getSuite(), Suite::getAfterHandlers));
 	}
 
-
 	private List<Invokable> collectInvokables(Suite suite, Function<Suite, List<Invokable>> method) {
+		return this.collectInvokables(suite, method, false);
+	}
+
+	private List<Invokable> collectInvokables(Suite suite, Function<Suite, List<Invokable>> method, boolean parentFirst) {
 		List<Invokable> invokables = new ArrayList<>();
 		Suite parent = suite;
 		while (parent != null) {
-			invokables.addAll(method.apply(parent));
+			if (parentFirst && !invokables.isEmpty()) {
+				List<Invokable> childInvokables = new ArrayList<>(invokables);
+				List<Invokable> parentInvokables = new ArrayList<>(method.apply(parent));
+				parentInvokables.addAll(childInvokables);
+				invokables = parentInvokables;
+			} else {
+				invokables.addAll(method.apply(parent));
+			}
 			parent = parent.getParent();
 		}
 		return invokables;
